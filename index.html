@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OTHELLO — A Game in Black & White</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b10;
+  --ink:#ece7dd;
+  --muted:#8f8a7f;
+  --gold:#c9a96a;
+  --gold-soft:rgba(201,169,106,.35);
+  --sage:#9db89a;
+  --terra:#c96f4a;
+  --indigo:#6c7bd6;
+  --felt:#12372b;
+  --felt-2:#0d2a21;
+  --line:rgba(236,231,221,.12);
+  --glass:rgba(255,255,255,.06);
+  --radius:22px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Space Grotesk",system-ui,sans-serif;
+  overflow-x:hidden;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+/* ---------- ambient background ---------- */
+.aurora{position:fixed;inset:-20%;z-index:0;filter:blur(90px) saturate(1.2);opacity:.55;pointer-events:none;
+  background:
+    radial-gradient(38% 32% at 18% 18%, rgba(201,111,74,.45), transparent 70%),
+    radial-gradient(34% 36% at 82% 16%, rgba(108,123,214,.5), transparent 70%),
+    radial-gradient(42% 40% at 70% 85%, rgba(157,184,154,.38), transparent 70%),
+    radial-gradient(30% 30% at 20% 82%, rgba(201,169,106,.42), transparent 70%);
+  animation:drift 18s ease-in-out infinite alternate;
+}
+@keyframes drift{
+  0%{transform:translate3d(-2%,-1%,0) scale(1) rotate(0deg)}
+  50%{transform:translate3d(2%,2%,0) scale(1.06) rotate(2deg)}
+  100%{transform:translate3d(-1%,2%,0) scale(1.02) rotate(-2deg)}
+}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.14;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 30%, transparent 40%, rgba(0,0,0,.55) 100%);}
+.outline-word{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-54%) rotate(-90deg);
+  font-family:"Cormorant Garamond",serif;font-weight:300;letter-spacing:.35em;
+  font-size:clamp(120px,22vw,320px);line-height:1;white-space:nowrap;z-index:0;
+  color:transparent;-webkit-text-stroke:1px rgba(236,231,221,.07);
+  pointer-events:none;user-select:none;
+}
+/* ---------- layout ---------- */
+.wrap{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:28px 24px 60px}
+nav{display:flex;align-items:center;justify-content:space-between;padding:10px 4px 22px}
+.brand{display:flex;align-items:center;gap:14px}
+.mark{width:40px;height:40px;border-radius:50%;position:relative;
+  background:linear-gradient(135deg,#f5f1e8 0 50%,#101014 50% 100%);
+  border:1px solid rgba(201,169,106,.6);box-shadow:0 0 24px rgba(201,169,106,.25)}
+.mark::after{content:"";position:absolute;inset:7px;border-radius:50%;border:1px dashed rgba(201,169,106,.5)}
+.brand h1{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:22px;letter-spacing:.28em}
+.brand small{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.32em;color:var(--muted);margin-top:2px}
+.nav-links{display:flex;gap:10px;align-items:center}
+.pill{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--muted);background:rgba(255,255,255,.03)}
+.pill.live{color:var(--ink);border-color:var(--gold-soft)}
+.dot{width:7px;height:7px;border-radius:50%;background:#8fe3a0;display:inline-block;margin-right:8px;box-shadow:0 0 10px #8fe3a0;animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.4}}
+.hero{display:grid;grid-template-columns:1.05fr .95fr;gap:8px;align-items:end;margin:10px 0 26px}
+.hero h2{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(44px,6vw,84px);line-height:.95;letter-spacing:-.02em}
+.hero h2 em{font-style:italic;font-weight:400;background:linear-gradient(100deg,#ece7dd,#c9a96a 55%,#c96f4a);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);font-size:15px;line-height:1.7;max-width:46ch;margin-top:14px}
+.hero p b{color:var(--ink);font-weight:500}
+.meta-row{display:flex;gap:18px;margin-top:18px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+.meta-row span b{color:var(--gold);font-weight:400}
+/* ---------- game layout ---------- */
+.stage{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.85fr);gap:22px;align-items:start}
+/* board card */
+.board-card{position:relative;border-radius:28px;padding:22px;
+  background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.02));
+  border:1px solid rgba(236,231,221,.14);
+  box-shadow:0 30px 80px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.15);
+  backdrop-filter:blur(18px);
+}
+.board-frame{position:relative;border-radius:20px;padding:14px;
+  background:linear-gradient(135deg,#2a2216,#14100a 40%,#3a2d18 60%,#1a140c);
+  border:1px solid rgba(201,169,106,.45);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.6), 0 0 40px rgba(201,169,106,.12);
+}
+.board-felt{position:relative;border-radius:14px;overflow:hidden;
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(255,255,255,.12), transparent 55%),
+    radial-gradient(90% 90% at 50% 110%, rgba(0,0,0,.55), transparent 60%),
+    linear-gradient(160deg,var(--felt),var(--felt-2));
+  border:1px solid rgba(0,0,0,.6);
+  box-shadow:inset 0 20px 60px rgba(0,0,0,.5), inset 0 -10px 40px rgba(0,0,0,.4);
+}
+.board-grid{display:grid;grid-template-columns:24px minmax(0,1fr);padding:10px 10px 4px 4px;gap:0;align-items:stretch}
+.coord-col{display:grid;grid-template-rows:repeat(8,1fr);color:rgba(236,231,221,.45);font-family:"JetBrains Mono",monospace;font-size:10px;text-align:center;padding:10px 0;min-height:0}
+.coord-col>div{display:flex;align-items:center;justify-content:center;min-height:0}
+.col-coords{display:grid;grid-template-columns:repeat(8,1fr);text-align:center;font-family:"JetBrains Mono",monospace;font-size:10px;color:rgba(236,231,221,.45);padding:2px 10px 2px}
+.col-coords>div{min-width:0}
+#board{position:relative;display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));aspect-ratio:1/1;width:100%;gap:0;padding:10px;min-height:0;min-width:0}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:8px;min-width:0;min-height:0;aspect-ratio:1/1;overflow:hidden;
+  border-right:1px solid rgba(201,169,106,.18);border-bottom:1px solid rgba(201,169,106,.18)}
+.cell:nth-child(8n){border-right:none}
+.cell:nth-child(n+57){border-bottom:none}
+.cell:hover{background:rgba(255,255,255,.06)}
+.cell.valid:hover{background:rgba(201,169,106,.18)}
+.hint{width:22%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle,rgba(201,169,106,.95),rgba(201,169,106,.15) 70%);
+  box-shadow:0 0 14px rgba(201,169,106,.6);animation:pulse 1.8s ease-in-out infinite}
+.hint.capture{width:78%;height:78%;background:transparent;border:1.5px dashed rgba(201,169,106,.75);animation:spinPulse 3s linear infinite}
+@keyframes pulse{50%{transform:scale(.72);opacity:.7}}
+@keyframes spinPulse{to{transform:rotate(360deg)}}
+.disc{width:82%;aspect-ratio:1;border-radius:50%;position:relative;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.2,.8,.25,1.15)}
+.disc.black{background:radial-gradient(circle at 32% 28%, #4a4a55, #15151c 55%, #000 78%);
+  box-shadow:0 8px 18px rgba(0,0,0,.6), inset 0 2px 4px rgba(255,255,255,.25), inset 0 -4px 8px rgba(0,0,0,.7)}
+.disc.white{background:radial-gradient(circle at 32% 28%, #ffffff, #e8e1d2 45%, #b9b0a0 75%, #7d7668);
+  box-shadow:0 8px 18px rgba(0,0,0,.5), inset 0 2px 5px #fff, inset 0 -5px 10px rgba(0,0,0,.25)}
+.disc.placed{animation:drop .38s cubic-bezier(.2,1.4,.3,1)}
+@keyframes drop{0%{transform:scale(1.6);opacity:0}60%{transform:scale(.94)}100%{transform:scale(1);opacity:1}}
+.disc.flipping{transform:rotateY(90deg) scale(.92)}
+.cell.last::after{content:"";position:absolute;inset:6px;border-radius:10px;border:1px solid rgba(201,169,106,.7);pointer-events:none;box-shadow:0 0 18px rgba(201,169,106,.35)}
+#fx{position:absolute;inset:0;pointer-events:none;z-index:5}
+.board-foot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:12px;flex-wrap:wrap}
+.turn{display:flex;align-items:center;gap:12px;font-family:"Cormorant Garamond",serif;font-size:22px;font-style:italic}
+.turn-disc{width:30px;height:30px;border-radius:50%;transition:.4s}
+.turn-disc.b{background:radial-gradient(circle at 32% 28%,#4a4a55,#000 75%);box-shadow:0 4px 12px rgba(0,0,0,.6)}
+.turn-disc.w{background:radial-gradient(circle at 32% 28%,#fff,#b9b0a0);box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.controls-row{display:flex;gap:8px;flex-wrap:wrap}
+button{font-family:"Space Grotesk",sans-serif;cursor:pointer}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--ink);
+  border-radius:999px;padding:9px 16px;font-size:13px;letter-spacing:.04em;transition:.25s}
+.btn:hover{border-color:var(--gold);background:rgba(201,169,106,.14);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(135deg,#ece7dd,#c9a96a);color:#141310;border:none;font-weight:600}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+.btn.small{padding:7px 12px;font-size:12px}
+/* side panel */
+.side{display:flex;flex-direction:column;gap:16px}
+.card{border-radius:var(--radius);padding:20px 20px 18px;
+  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));
+  border:1px solid rgba(236,231,221,.12);backdrop-filter:blur(18px);
+  box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.card h3{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.28em;color:var(--muted);text-transform:uppercase;margin-bottom:16px}
+.score-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.player{display:flex;align-items:center;gap:12px}
+.avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:"Cormorant Garamond",serif;font-size:22px;font-style:italic;border:1px solid var(--gold-soft)}
+.avatar.b{background:#0e0e12;color:#ece7dd}
+.avatar.w{background:#ece7dd;color:#0e0e12}
+.player b{font-family:"Cormorant Garamond",serif;font-size:22px;font-weight:500;display:block;line-height:1}
+.player span{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);letter-spacing:.12em}
+.count{font-family:"Cormorant Garamond",serif;font-size:42px;line-height:1;min-width:56px;text-align:right}
+.meter{height:8px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;display:flex;margin:4px 0 6px}
+.meter i{display:block;height:100%;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.meter .mb{background:linear-gradient(90deg,#33333d,#000)}
+.meter .mw{background:linear-gradient(90deg,#fff,#c9a96a)}
+.meter-labels{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);letter-spacing:.14em}
+.seg{display:flex;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:999px;padding:3px;gap:3px}
+.seg button{flex:1;border:none;background:transparent;color:var(--muted);border-radius:999px;padding:8px 6px;font-size:12.5px;transition:.2s;white-space:nowrap}
+.seg button.on{background:#ece7dd;color:#111;font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.f{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;display:block;margin:12px 0 6px}
+select{width:100%;background:#14141a;color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;font-family:inherit}
+.toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.toggle{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:12px;color:var(--muted);background:transparent;transition:.2s}
+.toggle.on{color:var(--ink);border-color:var(--gold-soft);background:rgba(201,169,106,.12)}
+#moves{max-height:168px;overflow:auto;display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+#moves::-webkit-scrollbar{width:6px}
+#moves::-webkit-scrollbar-thumb{background:rgba(201,169,106,.4);border-radius:99px}
+.mv{font-family:"JetBrains Mono",monospace;font-size:11px;border:1px solid var(--line);border-radius:8px;padding:5px 9px;color:var(--muted)}
+.mv.b{color:var(--ink);border-color:rgba(255,255,255,.25)}
+.mv.w{background:rgba(236,231,221,.1);color:var(--ink)}
+.mv:last-child{border-color:var(--gold);color:var(--gold)}
+.status{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:19px;line-height:1.4;min-height:52px;color:#d8d2c4}
+.quote{font-family:"Cormorant Garamond",serif;font-style:italic;color:var(--muted);font-size:14px;line-height:1.6;border-left:1px solid var(--gold-soft);padding-left:12px;margin-top:12px}
+/* modal */
+.modal{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:20px;
+  background:rgba(5,5,8,.7);backdrop-filter:blur(10px)}
+.modal.show{display:flex}
+.modal-card{max-width:520px;width:100%;text-align:center;border-radius:28px;padding:44px 36px;
+  background:linear-gradient(180deg,#1c1c22,#0e0e12);border:1px solid rgba(201,169,106,.4);
+  box-shadow:0 40px 120px rgba(0,0,0,.7)}
+.modal-card h2{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:52px;line-height:1;margin-bottom:8px}
+.modal-card h2 em{font-style:italic;color:var(--gold)}
+.modal-card p{color:var(--muted);line-height:1.6;font-size:14px}
+.final{display:flex;justify-content:center;gap:26px;margin:24px 0}
+.final div b{font-family:"Cormorant Garamond",serif;font-size:52px;display:block;line-height:1}
+.final div span{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.24em;color:var(--muted)}
+footer{margin-top:34px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.thinking{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle}
+.thinking i{width:5px;height:5px;border-radius:50%;background:var(--gold);animation:tb 1s infinite}
+.thinking i:nth-child(2){animation-delay:.15s}.thinking i:nth-child(3){animation-delay:.3s}
+@keyframes tb{50%{opacity:.25;transform:translateY(-3px)}}
+@media(max-width:980px){
+  .hero{grid-template-columns:1fr}
+  .stage{grid-template-columns:1fr}
+  .outline-word{display:none}
+}
+</style>
+</head>
+<body>
+<div class="aurora"></div>
+<div class="grain"></div>
+<div class="vignette"></div>
+<div class="outline-word">OTHELLO · REVERSI · 1883</div>
+
+<div class="wrap">
+  <nav>
+    <div class="brand"><div class="mark"></div>
+      <h1>OTHELLO<small>ATELIER Nº 8 — REVERSI</small></h1>
+    </div>
+    <div class="nav-links">
+      <span class="pill"><span class="dot"></span>Local · No sign-up</span>
+      <span class="pill live" id="enginePill">Engine ready</span>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div>
+      <h2>A game in <em>black &amp; white.</em></h2>
+      <p><b>A minute to learn, a lifetime to master.</b> Outflank your rival, flip the board, and paint it your colour. Play against the machine — <i style="font-family:'Cormorant Garamond',serif;font-size:18px">or a friend beside you.</i></p>
+      <div class="meta-row"><span>Board <b>8 × 8</b></span><span>Discs <b id="discCountMeta">4 / 64</b></span><span>Move <b id="moveNoMeta">01</b></span><span>Valid <b id="validMeta">4</b></span></div>
+    </div>
+    <div>
+      <p style="font-family:'Cormorant Garamond',serif;font-style:italic;font-size:20px;line-height:1.5;color:#d8d2c4">“The board is a canvas. Every move is a brushstroke — you don't capture pieces, you convert them.”</p>
+    </div>
+  </div>
+
+  <div class="stage">
+    <section class="board-card">
+      <div class="board-frame">
+        <div class="board-felt">
+          <canvas id="fx"></canvas>
+          <div class="board-grid">
+            <div class="coord-col" id="rowCoords"></div>
+            <div style="min-width:0;min-height:0">
+              <div id="board" aria-label="Othello board"></div>
+              <div class="col-coords" id="colCoords"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="board-foot">
+        <div class="turn"><div class="turn-disc b" id="turnDisc"></div><span id="turnText">Noir to move</span><span class="thinking" id="thinking" style="display:none"><i></i><i></i><i></i></span></div>
+        <div class="controls-row">
+          <button class="btn small" id="btnUndo">↩ Undo</button>
+          <button class="btn small" id="btnHintsQuick">👁 Hints: on</button>
+          <button class="btn small" id="btnNew">✦ New game</button>
+          <button class="btn small primary" id="btnHintMove">Hint a move</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="card">
+        <h3>Score — Live canvas</h3>
+        <div class="score-row">
+          <div class="player"><div class="avatar b">N</div><div><b>Noir</b><span id="labelBlack">YOU · BLACK</span></div></div>
+          <div class="count" id="countB">2</div>
+        </div>
+        <div class="meter"><i class="mb" id="meterB" style="width:50%"></i><i class="mw" id="meterW" style="width:50%"></i></div>
+        <div class="meter-labels"><span>● BLACK</span><span>WHITE ○</span></div>
+        <div class="score-row" style="margin-top:14px;margin-bottom:0">
+          <div class="player"><div class="avatar w">B</div><div><b>Blanc</b><span id="labelWhite">ENGINE · WHITE</span></div></div>
+          <div class="count" id="countW">2</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Atelier settings</h3>
+        <label class="f">Mode</label>
+        <div class="seg" id="segMode">
+          <button data-mode="ai-black" class="on">You: Noir</button>
+          <button data-mode="ai-white">You: Blanc</button>
+          <button data-mode="2p">2 Players</button>
+        </div>
+        <div class="grid2">
+          <div><label class="f">Engine depth</label>
+            <select id="selDiff">
+              <option value="easy">Muse — casual</option>
+              <option value="medium" selected>Scholar — clever</option>
+              <option value="hard">Oracle — ruthless</option>
+            </select>
+          </div>
+          <div><label class="f">First move</label>
+            <select id="selFirst"><option value="B" selected>Noir (classic)</option><option value="W">Blanc</option></select>
+          </div>
+        </div>
+        <div class="toggles">
+          <button class="toggle on" id="tglHints">◉ Hints: on</button>
+          <button class="toggle on" id="tglSound">♪ Sound</button>
+          <button class="toggle on" id="tglFx">✦ Particles</button>
+        </div>
+        <div class="status" id="status">Noir opens the exhibition. Four discs on the canvas.</div>
+        <div class="quote" id="quote">“Surround, seduce, reverse.” — Atelier note nº 3</div>
+      </div>
+
+      <div class="card">
+        <h3>Chronicle — Moves <span id="mvCount" style="color:var(--gold)"></span></h3>
+        <div id="moves"><span class="mv">— no strokes yet —</span></div>
+        <div class="controls-row" style="margin-top:14px">
+          <button class="btn small" id="btnPass">Pass move</button>
+          <button class="btn small" id="btnCopy">Copy PGN</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer><span>Hand-painted in HTML · Canvas · WebAudio — single file</span><span>Flip to win — corners are gold</span></footer>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.3em;color:var(--gold)">EXHIBITION COMPLETE</div>
+    <h2 id="winTitle">Noir <em>prevails.</em></h2>
+    <p id="winSub">Blacks 40 — Whites 24</p>
+    <div class="final"><div><b id="finalB">40</b><span>NOIR</span></div><div><b id="finalW">24</b><span>BLANC</span></div></div>
+    <div style="display:flex;gap:10px;justify-content:center"><button class="btn primary" id="btnAgain">Play again</button><button class="btn" id="btnClose">Admire board</button></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= Othello engine ================= */
+const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const W8=[
+120,-20,20,5,5,20,-20,120,
+-20,-40,-5,-5,-5,-5,-5,-40,
+20,-5,15,3,3,15,-5,20,
+5,-5,3,3,3,3,-5,5,
+5,-5,3,3,3,3,-5,5,
+20,-5,15,3,3,15,-5,20,
+-20,-40,-5,-5,-5,-5,-5,-40,
+120,-20,20,5,5,20,-20,120];
+const FILES="ABCDEFGH";
+const inB=(r,c)=>r>=0&&r<8&&c>=0&&c<8;
+const opp=p=>p==="B"?"W":"B";
+function startBoard(){const b=Array.from({length:8},()=>Array(8).fill(null));b[3][3]="W";b[3][4]="B";b[4][3]="B";b[4][4]="W";return b;}
+function flipsFor(b,r,c,p){
+  if(b[r][c])return[];
+  const out=[];
+  for(const[dr,dc]of DIRS){let rr=r+dr,cc=c+dc;const line=[];
+    while(inB(rr,cc)&&b[rr][cc]===opp(p)){line.push([rr,cc]);rr+=dr;cc+=dc;}
+    if(line.length&&inB(rr,cc)&&b[rr][cc]===p)out.push(...line);}
+  return out;
+}
+function validMoves(b,p){const m=[];for(let r=0;r<8;r++)for(let c=0;c<8;c++){const f=flipsFor(b,r,c,p);if(f.length)m.push({r,c,flips:f});}return m;}
+function applyMove(b,r,c,p){const f=flipsFor(b,r,c,p);if(!f.length)return null;b[r][c]=p;for(const[rr,cc]of f)b[rr][cc]=p;return f;}
+function countDiscs(b){let B=0,W=0;for(const row of b)for(const v of row){if(v==="B")B++;else if(v==="W")W++;}return{B,W,empty:64-B-W};}
+function evaluate(b,p){
+  let pos=0,my=0,op=0,myMob=0,opMob=0;
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){const v=b[r][c];const w=W8[r*8+c];
+    if(v===p){pos+=w;my++;}else if(v===opp(p)){pos-=w;op++;}}
+  myMob=validMoves(b,p).length;opMob=validMoves(b,opp(p)).length;
+  const corners=[[0,0],[0,7],[7,0],[7,7]];
+  for(const[r,c]of corners){if(b[r][c]===p)pos+=250;else if(b[r][c]===opp(p))pos-=250;}
+  return pos*4+(my-op)*2+(myMob-opMob)*12;
+}
+function minimax(b,depth,alpha,beta,turn,root){
+  const mv=validMoves(b,turn);
+  const mvO=validMoves(b,opp(turn));
+  if(depth===0||(!mv.length&&!mvO.length))return{evaluate:evaluate(b,root),move:null};
+  if(!mv.length)return minimax(b,depth-1,alpha,beta,opp(turn),root);
+  // order: corners first, high flips
+  mv.sort((a,c2)=> (W8[c2.r*8+c2.c]-W8[a.r*8+a.c])||(c2.flips.length-a.flips.length));
+  let best=null;
+  if(turn===root){
+    let v=-Infinity;
+    for(const m of mv){const nb=b.map(r=>r.slice());applyMove(nb,m.r,m.c,turn);
+      const s=minimax(nb,depth-1,alpha,beta,opp(turn),root).evaluate;
+      if(s>v){v=s;best=m;}alpha=Math.max(alpha,v);if(beta<=alpha)break;}
+    return{evaluate:v,move:best};
+  }else{
+    let v=Infinity;
+    for(const m of mv){const nb=b.map(r=>r.slice());applyMove(nb,m.r,m.c,turn);
+      const s=minimax(nb,depth-1,alpha,beta,opp(turn),root).evaluate;
+      if(s<v){v=s;best=m;}beta=Math.min(beta,v);if(beta<=alpha)break;}
+    return{evaluate:v,move:best};
+  }
+}
+function engineMove(board,player,diff){
+  const depth=diff==="easy"?1:diff==="medium"?3:5;
+  const moves=validMoves(board,player);
+  if(!moves.length)return null;
+  if(diff==="easy"&&Math.random()<.35)return moves[Math.floor(Math.random()*moves.length)];
+  // tiny opening randomness for variety
+  const r=minimax(board.map(x=>x.slice()),depth,-Infinity,Infinity,player,player);
+  return r.move||moves[0];
+}
+
+/* ================= Audio (WebAudio, no files) ================= */
+let AC=null;let soundOn=true;
+function tone(f,dur=0.12,type="sine",gain=0.12,when=0){
+  if(!soundOn)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const t=AC.currentTime+when;
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type=type;o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+0.015);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g).connect(AC.destination);o.start(t);o.stop(t+dur+0.02);
+  }catch(e){}
+}
+const sfx={
+  place(){tone(320,.14,"triangle",.14);tone(520,.18,"sine",.1,.05);},
+  flip(){tone(660,.09,"sine",.07);tone(880,.1,"sine",.06,.06);},
+  bad(){tone(140,.2,"sawtooth",.07);},
+  win(){[523,659,784,1046].forEach((f,i)=>tone(f,.28,"sine",.1,i*.13));},
+  pass(){tone(240,.2,"sine",.09);}
+};
+
+/* ================= State + DOM ================= */
+const $=id=>document.getElementById(id);
+const boardEl=$("board"),fx=$("fx"),fctx=fx.getContext("2d");
+let board=startBoard(),turn="B",history=[],validCache=[],lastMove=null,gameOver=false;
+let mode="ai-black",diff="medium",showHints=true,fxOn=true,aiBusy=false;
+const QUOTES=["“Surround, seduce, reverse.” — Atelier note nº 3","“Corners are gold. Edges are silver.”","“Don't count discs. Count futures.”","“The quiet move is often the loudest.”","“Every flip is a small betrayal — beautiful.”"];
+
+function buildCoords(){
+  $("rowCoords").innerHTML=[1,2,3,4,5,6,7,8].map(n=>`<div>${n}</div>`).join("");
+  $("colCoords").innerHTML=FILES.split("").map(f=>`<div>${f}</div>`).join("");
+}
+function moveName(r,c){return FILES[c]+(r+1);}
+function setStatus(t){$("status").textContent=t;}
+function updateMeta(){
+  const{B,W,empty}=countDiscs(board);
+  $("countB").textContent=B;$("countW").textContent=W;
+  $("discCountMeta").textContent=`${64-empty} / 64`;
+  $("moveNoMeta").textContent=String(history.length+1).padStart(2,"0");
+  $("validMeta").textContent=validCache.length;
+  const tot=Math.max(1,B+W);
+  $("meterB").style.width=(B/tot*100)+"%";$("meterW").style.width=(W/tot*100)+"%";
+  $("turnDisc").className="turn-disc "+(turn==="B"?"b":"w");
+  $("labelBlack").textContent=mode==="ai-white"?"ENGINE · BLACK":mode==="2p"?"PLAYER 1 · BLACK":"YOU · BLACK";
+  $("labelWhite").textContent=mode==="ai-black"?"ENGINE · WHITE":mode==="2p"?"PLAYER 2 · WHITE":"YOU · WHITE";
+}
+function renderMoves(){
+  const el=$("moves");
+  if(!history.length){el.innerHTML=`<span class="mv">— no strokes yet —</span>`;}
+  else el.innerHTML=history.map((h,i)=>`<span class="mv ${h.p.toLowerCase()}">${String(i+1).padStart(2,"0")} ${h.p}·${moveName(h.r,h.c)}</span>`).join("");
+  $("mvCount").textContent="· "+history.length;
+  el.scrollTop=el.scrollHeight;
+}
+function render(){
+  validCache=gameOver?[]:validMoves(board,turn);
+  boardEl.innerHTML="";
+  const vset=new Set(validCache.map(m=>m.r+","+m.c));
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+    const d=document.createElement("div");
+    d.className="cell"+(lastMove&&lastMove.r===r&&lastMove.c===c?" last":"")+(showHints&&vset.has(r+","+c)?" valid":"");
+    d.dataset.r=r;d.dataset.c=c;
+    const v=board[r][c];
+    if(v){const disc=document.createElement("div");disc.className="disc "+(v==="B"?"black":"white");d.appendChild(disc);}
+    else if(showHints&&vset.has(r+","+c)){
+      const m=validCache.find(x=>x.r===r&&x.c===c);
+      const h=document.createElement("div");h.className="hint"+(m&&m.flips.length>=3?" capture":"");d.appendChild(h);
+    }
+    d.addEventListener("click",()=>onCell(r,c,d));
+    boardEl.appendChild(d);
+  }
+  updateMeta();renderMoves();sizeFx();
+}
+function sizeFx(){const r=boardEl.getBoundingClientRect();fx.width=r.width;fx.height=r.height;fx.style.width="100%";fx.style.height="100%";}
+
+/* particles */
+let parts=[];
+function burst(clientX,clientY,n=26,colors=["#c9a96a","#ece7dd","#c96f4a","#9db89a"]){
+  if(!fxOn)return;
+  const rect=fx.getBoundingClientRect();
+  const x=clientX-rect.left,y=clientY-rect.top;
+  const scale=fx.width/Math.max(1,rect.width);
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,sp=(1+Math.random()*4)*scale;
+    parts.push({x:x*scale,y:y*scale,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-1,life:1,decay:.015+Math.random()*.02,r:(1.5+Math.random()*2.5)*scale,c:colors[i%colors.length]});}
+}
+function tickFx(){
+  fctx.clearRect(0,0,fx.width,fx.height);
+  parts=parts.filter(p=>p.life>0);
+  for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vy+=.06;p.life-=p.decay;
+    fctx.globalAlpha=Math.max(0,p.life);fctx.fillStyle=p.c;fctx.beginPath();fctx.arc(p.x,p.y,p.r,0,7);fctx.fill();}
+  fctx.globalAlpha=1;
+  requestAnimationFrame(tickFx);
+}
+
+/* ================= Game flow ================= */
+function aiToMove(){
+  if(mode==="2p")return false;
+  if(mode==="ai-black"&&turn==="W")return true;
+  if(mode==="ai-white"&&turn==="B")return true;
+  return false;
+}
+function onCell(r,c,cellEl){
+  if(gameOver||aiBusy)return;
+  if(aiToMove())return;
+  const flips=flipsFor(board,r,c,turn);
+  if(!flips.length){sfx.bad();cellEl.animate([{transform:"translateX(0)"},{transform:"translateX(-5px)"},{transform:"translateX(5px)"},{transform:"translateX(0)"}],{duration:220});setStatus(`${moveName(r,c)} is not a legal stroke — you must outflank.`);return;}
+  doMove(r,c,turn,true);
+}
+function doMove(r,c,player,animate){
+  const flips=applyMove(board,r,c,player);
+  if(!flips)return;
+  history.push({r,c,p:player,flips:flips.map(f=>f.slice())});
+  lastMove={r,c};sfx.place();
+  render();
+  // flip animation + particles at flipped discs
+  const cells=boardEl.children;
+  flips.forEach(([fr,fc],i)=>{
+    const cell=cells[fr*8+fc];const disc=cell&&cell.querySelector(".disc");
+    if(disc){disc.classList.add("flipping");
+      setTimeout(()=>{disc.className="disc "+(player==="B"?"black":"white")+" placed";if(i%2===0)sfx.flip();},140+i*28);}
+  });
+  if(animate){
+    const rc=boardEl.children[r*8+c].getBoundingClientRect();
+    burst(rc.left+rc.width/2,rc.top+rc.height/2,30);
+  }
+  setStatus(`${player==="B"?"Noir":"Blanc"} paints ${moveName(r,c)}, turning ${flips.length} disc${flips.length>1?"s":""}.`);
+  $("quote").textContent=QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  setTimeout(()=>advance(player),620);
+}
+function advance(justMoved){
+  if(gameOver)return;
+  turn=opp(justMoved);
+  let mv=validMoves(board,turn);
+  if(!mv.length){
+    const other=validMoves(board,opp(turn));
+    if(!other.length)return endGame();
+    sfx.pass();
+    setStatus(`${turn==="B"?"Noir":"Blanc"} has no stroke — pass. ${opp(turn)==="B"?"Noir":"Blanc"} paints again.`);
+    turn=opp(turn);
+  }
+  render();
+  if(aiToMove())aiPlay();
+}
+function aiPlay(){
+  aiBusy=true;$("thinking").style.display="inline-flex";
+  $("enginePill").textContent="Engine thinking…";
+  $("turnText").textContent=(turn==="B"?"Noir":"Blanc")+" is dreaming";
+  setTimeout(()=>{
+    const m=engineMove(board,turn,diff);
+    aiBusy=false;$("thinking").style.display="none";$("enginePill").textContent="Engine ready";
+    if(!m){advance(opp(turn));return;}
+    $("turnText").textContent=turn==="B"?"Noir to move":"Blanc to move";
+    doMove(m.r,m.c,turn,true);
+  },420+Math.random()*500);
+}
+function endGame(){
+  gameOver=true;render();
+  const{B,W}=countDiscs(board);
+  let title,sub;
+  if(B===W){title=`A perfect <em>tie.</em>`;sub=`Noir ${B} — Blanc ${W} · the canvas is balanced.`;}
+  else if(B>W){title=`Noir <em>prevails.</em>`;sub=`Noir ${B} — Blanc ${W} · darkness, elegantly.`;}
+  else{title=`Blanc <em>ascends.</em>`;sub=`Noir ${B} — Blanc ${W} · light takes the gallery.`;}
+  $("winTitle").innerHTML=title;$("winSub").textContent=sub;
+  $("finalB").textContent=B;$("finalW").textContent=W;
+  setStatus(B===W?`Tied at ${B}–${W}. A shared canvas.`:`${B>W?"Noir":"Blanc"} wins ${Math.max(B,W)}–${Math.min(B,W)}.`);
+  sfx.win();$("modal").classList.add("show");
+  // celebratory rain
+  for(let i=0;i<6;i++)setTimeout(()=>burst(innerWidth/2+(Math.random()-.5)*400,innerHeight*0.3,40),i*180);
+}
+function newGame(){
+  const f=$("selFirst").value;
+  board=startBoard();turn=f;history=[];lastMove=null;gameOver=false;aiBusy=false;
+  $("modal").classList.remove("show");
+  $("turnText").textContent=turn==="B"?"Noir to move":"Blanc to move";
+  setStatus(turn==="B"?"Noir opens the exhibition. Four discs on the canvas.":"Blanc opens — a rare, luminous beginning.");
+  render();
+  if(aiToMove())aiPlay();
+}
+function undo(){
+  if(aiBusy)return;
+  if(!history.length)return;
+  const steps=(mode==="2p")?1:2;
+  for(let i=0;i<steps&&history.length;i++){
+    const h=history.pop();
+    board[h.r][h.c]=null;
+    for(const[fr,fc]of h.flips)board[fr][fc]=opp(h.p);
+  }
+  turn=history.length?(opp(history[history.length-1].p)===turn?turn:opp(history[history.length-1].p)): $("selFirst").value;
+  // recompute turn properly: alternate from last history
+  if(history.length){turn=opp(history[history.length-1].p);}else{turn=$("selFirst").value;}
+  // if it's AI turn after undo, step back one more so human moves
+  if(aiToMove()&&history.length){const h=history.pop();board[h.r][h.c]=null;for(const[fr,fc]of h.flips)board[fr][fc]=opp(h.p);turn=opp(history.length?history[history.length-1].p:$("selFirst")==="B"?"W":"B");if(!history.length)turn=$("selFirst").value;else turn=opp(history[history.length-1].p);}
+  lastMove=history.length?{r:history[history.length-1].r,c:history[history.length-1].c}:null;
+  gameOver=false;$("modal").classList.remove("show");
+  $("turnText").textContent=turn==="B"?"Noir to move":"Blanc to move";
+  setStatus("A stroke undone — the canvas forgives.");render();
+}
+
+/* ================= wiring ================= */
+$("segMode").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  document.querySelectorAll("#segMode button").forEach(x=>x.classList.remove("on"));
+  b.classList.add("on");mode=b.dataset.mode;newGame();
+});
+$("selDiff").addEventListener("change",e=>diff=e.target.value);
+$("selFirst").addEventListener("change",()=>newGame());
+$("btnNew").addEventListener("click",newGame);
+$("btnAgain").addEventListener("click",newGame);
+$("btnClose").addEventListener("click",()=>$("modal").classList.remove("show"));
+$("btnUndo").addEventListener("click",undo);
+$("btnPass").addEventListener("click",()=>{
+  if(gameOver||aiBusy||aiToMove())return;
+  if(validMoves(board,turn).length){sfx.bad();setStatus("You have legal strokes — passing is not allowed.");return;}
+  sfx.pass();advance(turn);
+});
+$("btnHintMove").addEventListener("click",()=>{
+  if(gameOver||aiBusy)return;
+  const m=engineMove(board,turn,"hard");if(!m)return;
+  const cell=boardEl.children[m.r*8+m.c];
+  cell.animate([{boxShadow:"0 0 0 0 rgba(201,169,106,.9)"},{boxShadow:"0 0 0 14px rgba(201,169,106,0)"}],{duration:900,iterations:2});
+  setStatus(`The atelier whispers: ${moveName(m.r,m.c)} turns ${m.flips.length}.`);
+});
+$("btnCopy").addEventListener("click",()=>{
+  const pgn=history.map((h,i)=>`${i+1}. ${h.p}@${moveName(h.r,h.c)}`).join(" ");
+  navigator.clipboard&&navigator.clipboard.writeText("OTHELLO "+pgn);
+  setStatus("Chronicle copied — paste it anywhere.");
+});
+function bindToggle(id,fn){$(id).addEventListener("click",()=>{$(id).classList.toggle("on");fn($(id).classList.contains("on"));});}
+function setHints(on){
+  showHints=on;
+  const t=$("tglHints"),q=$("btnHintsQuick");
+  t.classList.toggle("on",on);t.textContent=on?"◉ Hints: on":"○ Hints: off";
+  if(q)q.textContent=on?"👁 Hints: on":"👁 Hints: off";
+  render();
+}
+$("tglHints").addEventListener("click",()=>setHints(!showHints));
+$("btnHintsQuick").addEventListener("click",()=>setHints(!showHints));
+addEventListener("keydown",e=>{if((e.key==="h"||e.key==="H")&&!e.metaKey&&!e.ctrlKey&&document.activeElement.tagName!=="SELECT"&&document.activeElement.tagName!=="INPUT")setHints(!showHints);});
+bindToggle("tglSound",on=>{soundOn=on;});
+bindToggle("tglFx",on=>{fxOn=on;});
+addEventListener("resize",sizeFx);
+
+/* self-test in console */
+function selfTest(){
+  const t=startBoard();
+  console.assert(validMoves(t,"B").length===4,"open moves should be 4");
+  console.assert(flipsFor(t,2,3,"B").length===1,"D3 flips 1");
+  const b2=t.map(r=>r.slice());applyMove(b2,2,3,"B");
+  console.assert(b2[3][3]==="B","flip works");
+  console.assert(engineMove(t,"B","medium")!=null,"engine finds move");
+  console.log("%coth­ello self-test passed","color:#c9a96a");
+}
+
+buildCoords();render();tickFx();selfTest();newGame();
+</script>
+</body>
+</html>
