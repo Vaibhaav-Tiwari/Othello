@@ -20,6 +20,7 @@ Or just double-click `index.html`.
 - Modes: play as Noir (black), as Blanc (white), or 2-player local
 - Hint dots (toggle with button or `H` key), on-demand "Hint a move", undo, pass, move chronicle, copy PGN
 - Particles, WebAudio sounds, responsive layout
+- Player settings persist between visits
 
 ## Deploy to Netlify
 
