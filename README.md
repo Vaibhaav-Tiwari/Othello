@@ -13,6 +13,12 @@ python3 -m http.server 8000
 
 Or just double-click `index.html`.
 
+## Tests
+
+```bash
+node --test tests/
+```
+
 ## Features
 
 - Full Othello rules: legal moves, flipping, passes, game-over detection
