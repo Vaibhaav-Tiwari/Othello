@@ -1,0 +1,15 @@
+Tally run-20261012-153240Z #2 a1: Add docs/ENGINE.md describing how the AI opponent chooses a move
+Neatlogs correlation: runId=run-20261012-153240Z taskId=#2 attempt=1.
+
+You are already inside your own AO git worktree for the target repo. Work only in the current working directory.
+Never read or write any other checkout or path outside this worktree; this worktree is the authoritative target repo.
+Commit your changes on your current branch, but do not push and do not open a pull request; Tally will publish the verified branch.
+Do not run ao commands. Tally handles session reporting and lifecycle; report your result in your final response only.
+Change only what this task needs. Do not add or edit CI, deployment, or tooling config unless the task explicitly asks for it. If a check outside your task fails, report it; do not fix it.
+
+Create a new file `docs/ENGINE.md` (do not edit any existing file). Describe the AI in `index.html` accurately from the code: the positional weight table `W8` and what the corner and edge values mean, what `evaluate()` scores, how `minimax()` uses alpha-beta pruning, how `engineMove()` maps the three difficulty names shown in the UI (Muse, Scholar, Oracle) to search depth, and what happens when a side has no legal move. Add a short "Limits" section listing what the engine does not do (for example no opening book or endgame solver, if that is what the code shows). Keep it under 100 lines and quote function names exactly.
+
+Target repo: Vaibhaav-Tiwari/Othello
+Do not install dependencies or use the network unless the task explicitly requires it.
+Run this verification command before claiming success: node -e "const s=require('fs').readFileSync('index.html','utf8').split('<script>')[1].split('</script>')[0]; new Function(s)"
+You are running on tier cheap (codex/gpt-5.6-luna).
