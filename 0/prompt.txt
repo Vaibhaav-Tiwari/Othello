@@ -1,0 +1,15 @@
+Tally run-20261012-153240Z #3 a1: Add a Node test file for the rules engine
+Neatlogs correlation: runId=run-20261012-153240Z taskId=#3 attempt=1.
+
+You are already inside your own AO git worktree for the target repo. Work only in the current working directory.
+Never read or write any other checkout or path outside this worktree; this worktree is the authoritative target repo.
+Commit your changes on your current branch, but do not push and do not open a pull request; Tally will publish the verified branch.
+Do not run ao commands. Tally handles session reporting and lifecycle; report your result in your final response only.
+Change only what this task needs. Do not add or edit CI, deployment, or tooling config unless the task explicitly asks for it. If a check outside your task fails, report it; do not fix it.
+
+The game has only a console `selfTest()`. Add `tests/engine.test.mjs`, runnable with `node --test tests/`, without editing `index.html`. The test file should read `index.html`, take the inline script between `<script>` and `</script>`, and evaluate only the pure engine functions it needs (`startBoard`, `flipsFor`, `validMoves`, `applyMove`, `countDiscs`, and their constants) in an isolated scope with no DOM, for example by slicing the engine section that ends before the WebAudio / DOM code and running it with `new Function`. Cover at least: the start position has 2 discs each and exactly 4 legal moves for black; playing D3 for black flips exactly one disc; a move that flips nothing is rejected by `applyMove`; flips work along a diagonal; `validMoves` returns an empty list for a player with no legal move on a constructed board; `countDiscs` totals always sum to 64 with `empty`. Add a "Tests" section to `README.md` with the command. The tests must pass on Node 20 with no dependencies.
+
+Target repo: Vaibhaav-Tiwari/Othello
+Do not install dependencies or use the network unless the task explicitly requires it.
+Run this verification command before claiming success: node -e "const s=require('fs').readFileSync('index.html','utf8').split('<script>')[1].split('</script>')[0]; new Function(s)"
+You are running on tier cheap (codex/gpt-5.6-luna).
