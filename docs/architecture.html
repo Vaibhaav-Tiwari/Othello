@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Othello Architecture</title>
+<meta name="description" content="Technical internals of the single-file Othello game: structure, engine, rendering and AI." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=Space+Grotesk:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b10;--ink:#ece7dd;--muted:#8f8a7f;--gold:#c9a96a;--gold-soft:rgba(201,169,106,.35);
+  --sage:#9db89a;--terra:#c96f4a;--indigo:#6c7bd6;--felt:#12372b;--felt-2:#0d2a21;
+  --line:rgba(236,231,221,.12);--glass:rgba(255,255,255,.05);--code:rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Space Grotesk",system-ui,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.aurora{position:fixed;inset:-20%;z-index:0;filter:blur(90px);opacity:.4;pointer-events:none;
+  background:radial-gradient(38% 32% at 18% 18%,rgba(201,111,74,.45),transparent 70%),
+    radial-gradient(34% 36% at 82% 16%,rgba(108,123,214,.5),transparent 70%),
+    radial-gradient(42% 40% at 70% 85%,rgba(157,184,154,.38),transparent 70%);
+  animation:drift 20s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate3d(2%,2%,0) scale(1.05) rotate(2deg)}}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.12;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.wrap{position:relative;z-index:2;max-width:980px;margin:0 auto;padding:28px 16px 80px}
+nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding-bottom:30px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.mark{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f5f1e8 0 50%,#101014 50%);border:1px solid rgba(201,169,106,.6);box-shadow:0 0 20px rgba(201,169,106,.25)}
+.brand b{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:20px;letter-spacing:.28em}
+.links{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;text-decoration:none;
+  border:1px solid var(--line);border-radius:999px;padding:7px 13px;color:var(--muted);background:rgba(255,255,255,.03);transition:.2s}
+.pill:hover,.pill.on{color:var(--ink);border-color:var(--gold-soft)}
+header h1{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(42px,7vw,80px);line-height:.95;letter-spacing:-.02em}
+header h1 em{font-style:italic;font-weight:400;background:linear-gradient(100deg,#ece7dd,#c9a96a 55%,#c96f4a);-webkit-background-clip:text;background-clip:text;color:transparent}
+header p{color:var(--muted);max-width:60ch;margin-top:16px}
+.meta{display:flex;flex-wrap:wrap;gap:18px;margin-top:18px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.meta b{color:var(--gold);font-weight:400}
+.toc{margin:40px 0 10px;display:flex;flex-wrap:wrap;gap:8px}
+section{margin-top:56px}
+.kicker{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase}
+h2{font-family:"Cormorant Garamond",serif;font-weight:400;font-size:clamp(30px,4.5vw,44px);line-height:1.1;margin:6px 0 14px}
+h3{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:22px;margin:22px 0 6px;color:var(--ink)}
+p,li{color:#cfc9bd;font-size:15.5px}
+p+p{margin-top:12px}
+ul{padding-left:20px;margin-top:8px}
+li{margin:4px 0}
+code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--gold);background:var(--code);padding:1px 6px;border-radius:6px}
+pre{font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.6;background:var(--code);border:1px solid var(--line);border-radius:16px;padding:16px 18px;overflow-x:auto;margin:14px 0;color:#d8d2c6}
+pre .c{color:var(--muted)} pre .k{color:var(--terra)} pre .s{color:var(--sage)}
+.card{border-radius:22px;padding:22px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid rgba(236,231,221,.13);backdrop-filter:blur(14px);margin-top:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:16px}
+.grid .card{margin:0}
+.card .tag{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.tree{white-space:pre}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:"JetBrains Mono",monospace;font-weight:400;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+td{color:#cfc9bd}
+.tablewrap{overflow-x:auto}
+/* weight heatmap */
+.heat{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;max-width:360px;padding:12px;border-radius:16px;
+  background:linear-gradient(160deg,var(--felt),var(--felt-2));border:1px solid rgba(201,169,106,.4);margin-top:14px}
+.heat div{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:10px;color:#0b0b10}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;font-family:"JetBrains Mono",monospace;font-size:12px}
+.flow span{border:1px solid var(--gold-soft);border-radius:999px;padding:6px 12px;background:rgba(201,169,106,.06)}
+.flow i{color:var(--muted);font-style:normal}
+footer{margin-top:80px;padding-top:24px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;color:var(--muted);font-size:13px}
+footer a{color:var(--gold)}
+@media (prefers-reduced-motion:reduce){.aurora{animation:none}}
+</style>
+</head>
+<body>
+<div class="aurora"></div><div class="grain"></div>
+<div class="wrap">
+<nav>
+  <a class="brand" href="../index.html"><span class="mark"></span><b>OTHELLO</b></a>
+  <div class="links">
+    <a class="pill" href="../index.html">Play</a>
+    <a class="pill" href="about.html">About</a>
+    <a class="pill on" href="architecture.html">Architecture</a>
+  </div>
+</nav>
+
+<header>
+  <div class="kicker">Atelier notes · technical</div>
+  <h1>How the canvas <em>thinks.</em></h1>
+  <p>A tour of the internals: one HTML file, no build step, no dependencies. Board state is a plain 2D array, the DOM is redrawn from it after every move, and the opponent is a small minimax search with alpha-beta pruning.</p>
+  <div class="meta"><span><b>1</b> file</span><span><b>0</b> dependencies</span><span><b>~660</b> lines</span><span><b>3</b> engine depths</span></div>
+</header>
+
+<div class="toc">
+  <a class="pill" href="#files">Files</a><a class="pill" href="#state">State</a><a class="pill" href="#rules">Rules</a>
+  <a class="pill" href="#flow">Game flow</a><a class="pill" href="#ai">AI</a><a class="pill" href="#render">Rendering</a><a class="pill" href="#extras">Audio &amp; extras</a>
+</div>
+
+<section id="files">
+  <div class="kicker">I · Structure</div>
+  <h2>File structure</h2>
+  <pre class="tree">othello-game/
+├── index.html      <span class="c">the entire game: markup, CSS (&lt;style&gt;) and JS (&lt;script&gt;)</span>
+├── README.md       <span class="c">features, local play, deploy notes</span>
+├── netlify.toml    <span class="c">publish "." + X-Frame-Options / nosniff headers</span>
+└── docs/
+    ├── about.html          <span class="c">project overview</span>
+    └── architecture.html   <span class="c">this page</span></pre>
+  <p>Inside <code>index.html</code> the script is split into labelled banners: <em>Othello engine</em>, <em>Audio</em>, <em>State + DOM</em>, particles, <em>Game flow</em>, <em>wiring</em>, and a console self-test. External resources are limited to Google Fonts (Cormorant Garamond, Space Grotesk, JetBrains Mono).</p>
+</section>
+
+<section id="state">
+  <div class="kicker">II · Data</div>
+  <h2>State model</h2>
+  <p>The board is an 8×8 array of <code>null | "B" | "W"</code>. <code>startBoard()</code> places the four centre discs (W on D4/E5, B on E4/D5). All game state lives in a handful of module-level <code>let</code>s:</p>
+  <div class="tablewrap"><table>
+    <tr><th>Variable</th><th>Purpose</th></tr>
+    <tr><td><code>board</code></td><td>The 8×8 grid</td></tr>
+    <tr><td><code>turn</code></td><td>Side to move, <code>"B"</code> or <code>"W"</code></td></tr>
+    <tr><td><code>history</code></td><td><code>{r, c, p, flips}</code> per move — powers undo and the move chronicle</td></tr>
+    <tr><td><code>validCache</code></td><td>Legal moves for <code>turn</code>, recomputed on every render</td></tr>
+    <tr><td><code>mode</code></td><td><code>ai-black</code> (you play Black), <code>ai-white</code>, or <code>2p</code></td></tr>
+    <tr><td><code>diff</code></td><td><code>easy</code> / <code>medium</code> / <code>hard</code> (Muse / Scholar / Oracle)</td></tr>
+    <tr><td><code>aiBusy</code>, <code>gameOver</code></td><td>Input guards</td></tr>
+    <tr><td><code>showHints</code>, <code>soundOn</code>, <code>fxOn</code></td><td>UI toggles</td></tr>
+  </table></div>
+  <p>Squares are named with <code>moveName(r,c)</code> → file letter + rank, e.g. <code>D3</code>.</p>
+</section>
+
+<section id="rules">
+  <div class="kicker">III · Rules</div>
+  <h2>Game logic</h2>
+  <p>Everything rests on one function. For an empty square, <code>flipsFor</code> walks each of the 8 directions in <code>DIRS</code>, collecting opponent discs until it hits one of the player's own. A ray counts only if it's non-empty and ends on a friendly disc.</p>
+<pre><span class="k">function</span> flipsFor(b,r,c,p){
+  <span class="k">if</span>(b[r][c]) <span class="k">return</span> [];
+  <span class="k">const</span> out=[];
+  <span class="k">for</span>(<span class="k">const</span> [dr,dc] <span class="k">of</span> DIRS){
+    <span class="k">let</span> rr=r+dr, cc=c+dc; <span class="k">const</span> line=[];
+    <span class="k">while</span>(inB(rr,cc) &amp;&amp; b[rr][cc]===opp(p)){ line.push([rr,cc]); rr+=dr; cc+=dc; }
+    <span class="k">if</span>(line.length &amp;&amp; inB(rr,cc) &amp;&amp; b[rr][cc]===p) out.push(...line);
+  }
+  <span class="k">return</span> out;
+}</pre>
+  <div class="grid">
+    <div class="card"><div class="tag">validMoves(b,p)</div><p>Scans all 64 squares; any with a non-empty flip list is legal.</p></div>
+    <div class="card"><div class="tag">applyMove(b,r,c,p)</div><p>Places the disc and flips in place; returns the flipped coordinates (or <code>null</code> if illegal).</p></div>
+    <div class="card"><div class="tag">countDiscs(b)</div><p>Returns <code>{B, W, empty}</code> for the score meter and end screen.</p></div>
+  </div>
+  <h3>Passing &amp; game end</h3>
+  <p><code>advance()</code> switches sides. If the new side has no move but the other does, it plays a pass sound and hands the turn back. If neither side can move, <code>endGame()</code> counts discs and shows the result modal. A manual <em>Pass</em> button exists, but it's rejected while legal moves remain.</p>
+  <h3>Undo</h3>
+  <p>Each history entry stores its flips, so <code>undo()</code> just reverses them: clear the placed square and give each flipped disc back to the opponent. In AI modes it pops two plies so control returns to the human, then sets <code>turn</code> from the last remaining entry (or the chosen first player).</p>
+</section>
+
+<section id="flow">
+  <div class="kicker">IV · Sequence</div>
+  <h2>Game flow</h2>
+  <div class="flow">
+    <span>click cell</span><i>→</i><span>onCell</span><i>→</i><span>doMove</span><i>→</i><span>render + flip anim</span><i>→ 620ms →</i><span>advance</span><i>→</i><span>aiPlay?</span>
+  </div>
+  <p><code>onCell</code> ignores clicks while the AI is thinking, when it's the AI's turn, or after the game ends. Illegal clicks trigger a low buzz and a shake animation via the Web Animations API. <code>aiPlay()</code> waits a random 420–920&nbsp;ms (so the engine looks like it's “dreaming”), calls <code>engineMove</code>, then goes through the same <code>doMove</code> path as a human move.</p>
+  <p>Changing mode or first player calls <code>newGame()</code>. If the engine moves first, it starts playing right away.</p>
+</section>
+
+<section id="ai">
+  <div class="kicker">V · The Oracle</div>
+  <h2>AI opponent</h2>
+  <p><code>engineMove(board, player, diff)</code> runs a depth-limited <strong>minimax with alpha-beta pruning</strong>, always scored from the root player's side.</p>
+  <div class="tablewrap"><table>
+    <tr><th>Level</th><th>Key</th><th>Depth</th><th>Notes</th></tr>
+    <tr><td>Muse</td><td><code>easy</code></td><td>1 ply</td><td>35% of the time, plays a random legal move</td></tr>
+    <tr><td>Scholar</td><td><code>medium</code></td><td>3 plies</td><td>Default</td></tr>
+    <tr><td>Oracle</td><td><code>hard</code></td><td>5 plies</td><td>Also powers the “Hint a move” button</td></tr>
+  </table></div>
+  <h3>Evaluation</h3>
+  <p><code>evaluate(b, p)</code> combines three terms:</p>
+<pre>score = positional × 4  +  (myDiscs − oppDiscs) × 2  +  (myMobility − oppMobility) × 12
+<span class="c">positional = Σ W8[square] for own discs − Σ for opponent discs, ±250 per held corner</span></pre>
+  <p>The <code>W8</code> weight table rewards corners and edges and punishes the X- and C-squares next to empty corners:</p>
+  <div class="heat" id="heat" aria-label="Positional weight table W8"></div>
+  <h3>Search details</h3>
+  <ul>
+    <li><strong>Move ordering:</strong> candidates are sorted by square weight, then by number of flips, so corners get searched first and pruning kicks in earlier.</li>
+    <li><strong>Passes:</strong> if the side to move has no moves, the search recurses for the opponent at <code>depth − 1</code>. If neither side can move, it's a leaf.</li>
+    <li><strong>Copies:</strong> each child gets a fresh <code>b.map(r =&gt; r.slice())</code>, so there's no make/unmake bookkeeping.</li>
+    <li>The search runs synchronously on the main thread inside a <code>setTimeout</code>. At depth 5 that's still quick enough on this board size.</li>
+  </ul>
+</section>
+
+<section id="render">
+  <div class="kicker">VI · Pigment</div>
+  <h2>Rendering</h2>
+  <p>Rendering is immediate-mode DOM. <code>render()</code> clears <code>#board</code>, which is a CSS grid, and rebuilds 64 <code>.cell</code> divs. Each one gets a <code>.disc.black/.white</code> child, or a <code>.hint</code> dot on legal squares (<code>.capture</code> when the move flips 3 or more). It then refreshes counters, the score meter, turn labels and the move chronicle.</p>
+  <div class="grid">
+    <div class="card"><div class="tag">Discs</div><p>Pure CSS: radial gradients give the lacquered look. A placed disc plays a <code>drop</code> keyframe. A flipped disc first gets <code>.flipping</code> (<code>rotateY(90deg)</code>), then its colour class is swapped 140&nbsp;ms + 28&nbsp;ms × index later, so flips ripple outward one after another.</p></div>
+    <div class="card"><div class="tag">Particles</div><p>A <code>&lt;canvas id="fx"&gt;</code> laid over the board. <code>burst()</code> spawns gold/ink/terracotta/sage particles with gravity and decay, drawn by a continuous <code>requestAnimationFrame</code> loop. The canvas is resized to match the board on every render and on window resize.</p></div>
+    <div class="card"><div class="tag">Atmosphere</div><p>Fixed layers: a blurred, drifting radial-gradient “aurora”, SVG-noise grain, a vignette, and a giant vertical outlined word in the background. The board sits in a gilded frame on green felt.</p></div>
+  </div>
+  <p>The layout is a two-column grid (board + side panel) that collapses to one column below 980&nbsp;px.</p>
+</section>
+
+<section id="extras">
+  <div class="kicker">VII · Flourishes</div>
+  <h2>Audio &amp; extras</h2>
+  <ul>
+    <li><strong>WebAudio sounds:</strong> <code>tone()</code> builds an oscillator and gain envelope on demand, with no audio files. <code>sfx</code> provides place, flip, bad, pass and win (a C-major arpeggio).</li>
+    <li><strong>Hints:</strong> toggled with a button or the <code>H</code> key (ignored while a select or input has focus).</li>
+    <li><strong>Chronicle export:</strong> “Copy” writes <code>OTHELLO 1. B@D3 2. W@C5 …</code> to the clipboard.</li>
+    <li><strong>Self-test:</strong> <code>selfTest()</code> runs <code>console.assert</code> checks on page load: 4 opening moves, D3 flips one disc, flipping works, and the engine finds a move.</li>
+    <li><strong>Deploy:</strong> static site. Netlify publishes the repo root and adds anti-framing and nosniff headers.</li>
+  </ul>
+</section>
+
+<footer>
+  <span>Othello · architecture notes</span>
+  <span><a href="about.html">About the project →</a> · <a href="../index.html">Play the game →</a></span>
+</footer>
+</div>
+<script>
+const W8=[120,-20,20,5,5,20,-20,120,-20,-40,-5,-5,-5,-5,-5,-40,20,-5,15,3,3,15,-5,20,5,-5,3,3,3,3,-5,5,5,-5,3,3,3,3,-5,5,20,-5,15,3,3,15,-5,20,-20,-40,-5,-5,-5,-5,-5,-40,120,-20,20,5,5,20,-20,120];
+const heat=document.getElementById("heat");
+for(const w of W8){
+  const d=document.createElement("div");
+  const t=w>0?Math.min(1,.25+w/120):Math.min(1,.25+(-w)/40);
+  d.style.background=w>0?`rgba(201,169,106,${t})`:`rgba(201,111,74,${t})`;
+  if(w===0)d.style.background="rgba(236,231,221,.15)";
+  d.textContent=w;d.title=`weight ${w}`;
+  heat.appendChild(d);
+}
+</script>
+</body>
+</html>
