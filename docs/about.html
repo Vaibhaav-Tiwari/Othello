@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>About — Othello</title>
+<meta name="description" content="Othello — A Game in Black &amp; White. An artsy, single-file Othello (Reversi) game with a minimax engine." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Space+Grotesk:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b10;--ink:#ece7dd;--muted:#8f8a7f;--gold:#c9a96a;--gold-soft:rgba(201,169,106,.35);
+  --sage:#9db89a;--terra:#c96f4a;--indigo:#6c7bd6;--felt:#12372b;--felt-2:#0d2a21;
+  --line:rgba(236,231,221,.12);--glass:rgba(255,255,255,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Space Grotesk",system-ui,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.aurora{position:fixed;inset:-20%;z-index:0;filter:blur(90px) saturate(1.2);opacity:.5;pointer-events:none;
+  background:radial-gradient(38% 32% at 18% 18%,rgba(201,111,74,.45),transparent 70%),radial-gradient(34% 36% at 82% 16%,rgba(108,123,214,.5),transparent 70%),radial-gradient(42% 40% at 70% 85%,rgba(157,184,154,.38),transparent 70%),radial-gradient(30% 30% at 20% 82%,rgba(201,169,106,.42),transparent 70%);
+  animation:drift 18s ease-in-out infinite alternate}
+@keyframes drift{0%{transform:translate3d(-2%,-1%,0)}50%{transform:translate3d(2%,2%,0) scale(1.06) rotate(2deg)}100%{transform:translate3d(-1%,2%,0) scale(1.02) rotate(-2deg)}}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.14;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.vignette{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(120% 90% at 50% 30%,transparent 40%,rgba(0,0,0,.55) 100%)}
+@media (prefers-reduced-motion:reduce){.aurora{animation:none}}
+.wrap{position:relative;z-index:2;max-width:1040px;margin:0 auto;padding:28px 24px 60px}
+nav{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:10px 0 40px}
+.brand{display:flex;align-items:center;gap:14px;color:inherit;text-decoration:none}
+.mark{width:40px;height:40px;border-radius:50%;position:relative;flex:none;background:linear-gradient(135deg,#f5f1e8 0 50%,#101014 50% 100%);border:1px solid rgba(201,169,106,.6);box-shadow:0 0 24px rgba(201,169,106,.25)}
+.mark::after{content:"";position:absolute;inset:7px;border-radius:50%;border:1px dashed rgba(201,169,106,.5)}
+.brand b{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:22px;letter-spacing:.28em}
+.brand small{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.32em;color:var(--muted)}
+.links{display:flex;gap:10px;flex-wrap:wrap}
+.pill{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--muted);background:rgba(255,255,255,.03);text-decoration:none;transition:.25s}
+.pill:hover,.pill.on{color:var(--ink);border-color:var(--gold-soft)}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:32px;align-items:center;margin-bottom:64px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.3em;color:var(--gold);text-transform:uppercase}
+h1{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(46px,7vw,88px);line-height:.95;letter-spacing:-.02em;margin:14px 0 18px}
+h1 em,h2 em{font-style:italic;font-weight:400;background:linear-gradient(100deg,#ece7dd,#c9a96a 55%,#c96f4a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{color:var(--muted);font-size:16px;max-width:50ch}
+.lede b{color:var(--ink);font-weight:500}
+.cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.btn{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:12px 20px;background:var(--glass);transition:.25s}
+.btn:hover{border-color:var(--gold)}
+.btn.primary{background:linear-gradient(120deg,var(--gold),var(--terra));color:#120e08;border-color:transparent}
+.mini{border-radius:24px;padding:14px;background:linear-gradient(135deg,#2a2216,#14100a 40%,#3a2d18 60%,#1a140c);border:1px solid rgba(201,169,106,.45);box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 40px rgba(201,169,106,.12)}
+.felt{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-radius:14px;padding:10px;aspect-ratio:1;background:radial-gradient(120% 100% at 50% 0%,rgba(255,255,255,.12),transparent 55%),linear-gradient(160deg,var(--felt),var(--felt-2));box-shadow:inset 0 20px 60px rgba(0,0,0,.5)}
+.felt i{display:flex;align-items:center;justify-content:center;border-right:1px solid rgba(201,169,106,.18);border-bottom:1px solid rgba(201,169,106,.18)}
+.felt i:nth-child(4n){border-right:none}.felt i:nth-child(n+13){border-bottom:none}
+.felt i::before{content:"";width:72%;aspect-ratio:1;border-radius:50%}
+.felt .b::before{background:radial-gradient(circle at 32% 28%,#4a4a55,#15151c 55%,#000 78%);box-shadow:0 6px 14px rgba(0,0,0,.6)}
+.felt .w::before{background:radial-gradient(circle at 32% 28%,#fff,#e8e1d2 45%,#b9b0a0 75%,#7d7668);box-shadow:0 6px 14px rgba(0,0,0,.5)}
+.felt .h::before{width:22%;background:radial-gradient(circle,rgba(201,169,106,.95),rgba(201,169,106,.15) 70%);box-shadow:0 0 14px rgba(201,169,106,.6);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(.72);opacity:.7}}
+section{margin-bottom:64px}
+h2{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(32px,4.5vw,48px);line-height:1.05;margin:8px 0 22px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.card{border-radius:22px;padding:22px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));border:1px solid rgba(236,231,221,.13);backdrop-filter:blur(14px)}
+.card h3{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:22px;margin-bottom:6px}
+.card p,.card li{color:var(--muted);font-size:14px}
+.card b{color:var(--ink);font-weight:500}
+.glyph{font-size:20px;color:var(--gold);margin-bottom:10px;display:block}
+ol.steps{list-style:none;counter-reset:s;display:grid;gap:14px}
+ol.steps li{counter-increment:s;display:grid;grid-template-columns:52px 1fr;gap:16px;align-items:start}
+ol.steps li::before{content:counter(s,decimal-leading-zero);font-family:"Cormorant Garamond",serif;font-style:italic;font-size:34px;line-height:1;color:var(--gold)}
+ol.steps b{color:var(--ink);font-weight:500}
+ol.steps p{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:"JetBrains Mono",monospace;font-weight:400;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+td:first-child{font-family:"Cormorant Garamond",serif;font-size:20px;white-space:nowrap}
+td{color:var(--muted)}
+.table-scroll{overflow-x:auto}
+kbd,code{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--ink)}
+pre{font-family:"JetBrains Mono",monospace;font-size:13px;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:14px;padding:16px 18px;overflow-x:auto;margin:10px 0 4px;color:var(--ink)}
+pre .c{color:var(--muted)}
+.quote{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:clamp(24px,3.4vw,34px);text-align:center;color:var(--ink);max-width:28ch;margin:0 auto 64px}
+.quote span{display:block;font-family:"JetBrains Mono",monospace;font-style:normal;font-size:11px;letter-spacing:.3em;color:var(--gold);margin-top:12px}
+footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:20px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+footer a{color:var(--gold);text-decoration:none}
+@media (max-width:760px){.hero{grid-template-columns:1fr}.mini{max-width:280px}.wrap{padding:20px 16px 48px}}
+</style>
+</head>
+<body>
+<div class="aurora"></div><div class="grain"></div><div class="vignette"></div>
+<div class="wrap">
+  <nav>
+    <a class="brand" href="../index.html"><span class="mark"></span><span><b>OTHELLO</b><small>A GAME IN BLACK &amp; WHITE</small></span></a>
+    <div class="links">
+      <a class="pill on" href="about.html">About</a>
+      <a class="pill" href="architecture.html">Architecture</a>
+      <a class="pill" href="../index.html">Play ↗</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <div class="eyebrow">The exhibition</div>
+      <h1>Sixty-four squares, <em>two colours,</em> endless reversals.</h1>
+      <p class="lede">An artsy take on <b>Othello</b> (Reversi), hand-painted in a <b>single HTML file</b> — no build step, no dependencies, no image or audio assets. Play Noir against a minimax engine, or pass the board to a friend.</p>
+      <div class="cta">
+        <a class="btn primary" href="../index.html">Enter the atelier</a>
+        <a class="btn" href="architecture.html">Read the architecture</a>
+      </div>
+    </div>
+    <div class="mini" aria-hidden="true">
+      <div class="felt">
+        <i></i><i class="h"></i><i></i><i></i>
+        <i></i><i class="w"></i><i class="b"></i><i></i>
+        <i></i><i class="b"></i><i class="w"></i><i class="h"></i>
+        <i></i><i></i><i></i><i></i>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <div class="eyebrow">What's on the canvas</div>
+    <h2>Features, <em>in brief</em></h2>
+    <div class="grid">
+      <div class="card"><span class="glyph">◐</span><h3>Full rules</h3><p>Legal-move detection in all eight directions, disc flipping, forced passes and automatic game-over when neither side can move.</p></div>
+      <div class="card"><span class="glyph">✧</span><h3>A thinking engine</h3><p>Minimax with alpha-beta pruning, move ordering that tries corners first, and an evaluation weighing position, corners, disc count and mobility.</p></div>
+      <div class="card"><span class="glyph">⇄</span><h3>Three modes</h3><p>Play as <b>Noir</b> (black), as <b>Blanc</b> (white), or <b>2 Players</b> locally. Choose which colour opens.</p></div>
+      <div class="card"><span class="glyph">◉</span><h3>Hints &amp; help</h3><p>Pulsing hint dots on legal squares (toggle with <kbd>H</kbd>), plus <b>Hint a move</b>, which asks the strongest engine for its pick.</p></div>
+      <div class="card"><span class="glyph">↩</span><h3>Chronicle</h3><p>A running move list, undo, a pass button, and <b>Copy PGN</b> to export the game to your clipboard.</p></div>
+      <div class="card"><span class="glyph">♪</span><h3>Sound &amp; light</h3><p>Synthesised WebAudio tones, canvas particle bursts, 3D disc flips and a drifting aurora — each effect can be switched off.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Engine depths</div>
+    <h2>Choose your <em>opponent</em></h2>
+    <div class="card table-scroll">
+      <table>
+        <thead><tr><th>Level</th><th>Search</th><th>Character</th></tr></thead>
+        <tbody>
+          <tr><td>Muse</td><td>1 ply, with a 35% chance of a random legal move</td><td>Casual — good for learning the shapes.</td></tr>
+          <tr><td>Scholar</td><td>3 plies (default)</td><td>Clever — punishes loose edges.</td></tr>
+          <tr><td>Oracle</td><td>5 plies</td><td>Ruthless — hunts corners and starves your mobility.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">How to play</div>
+    <h2>The rules, <em>gently</em></h2>
+    <ol class="steps">
+      <li><div><b>Four discs open the board.</b><p>Two black and two white sit crossed in the centre. Noir moves first by default.</p></div></li>
+      <li><div><b>Surround to capture.</b><p>Place a disc so that one or more straight lines of your opponent's discs — horizontal, vertical or diagonal — are bracketed between it and another of your discs. Every bracketed disc flips to your colour.</p></div></li>
+      <li><div><b>Every move must flip.</b><p>A move is only legal if it captures at least one disc. Gold dots mark your legal squares when hints are on.</p></div></li>
+      <li><div><b>No move? Pass.</b><p>If you have no legal move, your turn passes. The game won't let you pass while a legal move exists.</p></div></li>
+      <li><div><b>Most discs wins.</b><p>When neither player can move, the board is counted and the exhibition closes.</p></div></li>
+    </ol>
+  </section>
+
+  <p class="quote">“Corners are gold. Edges are silver.”<span>ATELIER NOTE</span></p>
+
+  <section>
+    <div class="eyebrow">Controls</div>
+    <h2>At your <em>fingertips</em></h2>
+    <div class="grid">
+      <div class="card"><h3>On the board</h3><p>Click a highlighted square to place a disc. The last move is framed in gold.</p></div>
+      <div class="card"><h3>Keyboard</h3><p><kbd>H</kbd> toggles hint dots (when no dropdown or input is focused).</p></div>
+      <div class="card"><h3>Buttons</h3><p><b>Undo</b> steps back to your last turn, <b>New game</b> resets, <b>Pass move</b> and <b>Copy PGN</b> live in the Chronicle.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Run it</div>
+    <h2>Open, <em>and play</em></h2>
+    <div class="grid">
+      <div class="card"><h3>Just open it</h3><p>Double-click <code>index.html</code>. Everything is inline; only the Google Fonts need a network connection.</p></div>
+      <div class="card"><h3>Local server</h3>
+<pre><span class="c"># from the repo root</span>
+python3 -m http.server 8000
+<span class="c"># → http://localhost:8000/</span></pre></div>
+      <div class="card"><h3>Deploy to Netlify</h3><p>Import the repo with an empty build command and publish directory <code>.</code>, or run:</p>
+<pre>netlify deploy --prod --dir .</pre></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Hand-painted in HTML · Canvas · WebAudio</span>
+    <span><a href="architecture.html">Architecture →</a></span>
+  </footer>
+</div>
+</body>
+</html>
